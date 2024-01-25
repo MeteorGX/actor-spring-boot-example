@@ -30,7 +30,7 @@
         <dependency>
             <groupId>com.meteorcat.spring.boot</groupId>
             <artifactId>actor-spring-boot-starter</artifactId>
-            <version>1.0.17-SNAPSHOT</version>
+            <version>1.0.19-SNAPSHOT</version>
         </dependency>
 
         <!-- Hotfix -->
@@ -47,6 +47,21 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+
+
+        <!-- JPA ORM -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- MariaDB 驱动 -->
+        <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>3.1.4</version>
+        </dependency>
+
 
         <!-- Test Unit -->
         <dependency>

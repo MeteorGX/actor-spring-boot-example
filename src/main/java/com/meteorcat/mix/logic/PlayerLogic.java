@@ -2,16 +2,18 @@ package com.meteorcat.mix.logic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.meteorcat.mix.WebsocketApplication;
-import com.meteorcat.mix.model.PlayerModel;
+import com.meteorcat.mix.model.PlayerInfoModel;
+import com.meteorcat.mix.model.server.PlayerInfoServer;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
+import com.meteorcat.spring.boot.starter.ActorEventContainer;
 import com.meteorcat.spring.boot.starter.ActorMapping;
 import com.meteorcat.spring.boot.starter.EnableActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 玩家信息 Actor
@@ -24,11 +26,26 @@ public class PlayerLogic extends ActorConfigurer {
      */
     final Logger logger = LoggerFactory.getLogger(PlayerLogic.class);
 
+    /**
+     * 玩家数据实体服务
+     */
+    final PlayerInfoServer playerInfoServer;
+
 
     /**
-     * 这里其实不是最终设计, 只是为了先临时挂载在进程内存当中测试业务逻辑
+     * 落地任务, 用来取消任务
      */
-    final Map<Long, PlayerModel> players = new HashMap<>();
+    ScheduledFuture<?> event = null;
+
+
+    /**
+     * 初始化
+     *
+     * @param playerInfoServer 玩家数据实体服务
+     */
+    public PlayerLogic(PlayerInfoServer playerInfoServer) {
+        this.playerInfoServer = playerInfoServer;
+    }
 
 
     /**
@@ -41,6 +58,14 @@ public class PlayerLogic extends ActorConfigurer {
     public void init() throws Exception {
         super.init();
         // todo: 启动时加载策划配表
+
+
+        // 启动的时候定时运行异步数据库写入任务
+        // 这里3秒检索下需要异步落地的任务, 具体可以自己调整
+        ActorEventContainer container = getContainer();
+        if (container != null) {
+            event = container.scheduleAtFixedRate(this::flushPlayer, 3L, 3L, TimeUnit.SECONDS);
+        }
     }
 
     /**
@@ -52,7 +77,31 @@ public class PlayerLogic extends ActorConfigurer {
     @Override
     public void destroy() throws Exception {
         super.destroy();
-        // todo: 退出时需要把之前变动数据写入数据库
+
+        // 确认任务之后取消掉默认任务
+        if (event != null) {
+            event.cancel(false);
+        }
+
+        // 退出游戏进程的时候数据最后落地
+        flushPlayer();
+    }
+
+
+    /**
+     * 写入数据落地
+     */
+    public void flushPlayer() {
+        for (Long mark : playerInfoServer.getMarks()) {
+            // 获取目前内存挂载的数据
+            PlayerInfoModel model = playerInfoServer.getByUid(mark);
+            if (model != null) {
+                // 落地保存进去
+                logger.debug("写入数据落地数据 = {}", model);
+                playerInfoServer.save(model);
+                playerInfoServer.clearMark(mark);
+            }
+        }
     }
 
 
@@ -62,30 +111,47 @@ public class PlayerLogic extends ActorConfigurer {
      */
     @ActorMapping(value = 300, state = {3})
     public void check(Long uid) {
-        // todo: 数据库先检索出样例加载到内存当中, 如果数据库不存在副本则需要帮助先在数据库落地实体
 
-        // 这里模拟账号写入
-        if (!players.containsKey(uid)) {
-            PlayerModel player = new PlayerModel();
-            player.setUid(uid);
-            player.setNickname(String.format("玩家 - %d", uid));
-            player.setGold(1000);// 创建账号获取资源, 这里其实应该读取策划配表
-            player.setScene(0);// 默认账号应该切换客户端场景ID, 这里其实也是需要策划配表确认
-            players.put(uid, player);
-            logger.info("已经挂载玩家实体: {}", player);
+        // 测试同步写入数据库, 查找玩家数据, 如果查询到会被挂载在内存中等待以后调用
+        PlayerInfoModel model = playerInfoServer.getByUid(uid);
+        if (model == null) {
+            // 不存在玩家就数据库同步生成玩家对象
+            model = new PlayerInfoModel();
+            model.setUid(uid);
+            model.setLevel(1);
+            model.setExp(0);
+            model.setGold(1000);// 注册赠送基础资源
+            model.setNickname(String.format("注册玩家%d", uid));
+            model.setFatigue(100); // 默认体力值
+            model.setScene(0);
+            model.setCreateTime(System.currentTimeMillis());
+            model.setUpdateTime(0L);
+
+            // 数据先同步落地到数据库
+            playerInfoServer.save(model);
         }
     }
 
 
     /**
-     * 暴露给已经登录玩家接口
-     * 用来登录之后加载时候获取玩家信息保存本地
+     * 玩家追加游戏货币 - 用于测试
+     * Example: { "value":302,"args":{ }}
+     *
+     * @param runtime 运行时
+     * @param session 会话
+     * @param args    参数
      */
-    @ActorMapping(value = 301, state = {1})
-    public void info(WebsocketApplication runtime, WebSocketSession session, JsonNode args) {
-        Long uid = runtime.getUid(session);
+    @ActorMapping(value = 302, state = {1})
+    public void addGold(WebsocketApplication runtime, WebSocketSession session, JsonNode args) {
+        // 测试追加100金币
 
-        // todo: 提供给客户端玩家所有道具|数值|红点等信息用于加载渲染
+        // 获取玩家实体
+        Long uid = runtime.getUid(session);
+        PlayerInfoModel model = playerInfoServer.getByUid(uid);
+
+        // 直接玩家添加 100 金币等待延迟写入
+        model.setGold(model.getGold() + 100);
+        playerInfoServer.mark(uid, model);
     }
 }
 
