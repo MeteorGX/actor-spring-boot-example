@@ -3,6 +3,7 @@ package com.meteorcat.mix.logic;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.meteorcat.mix.WebsocketApplication;
 import com.meteorcat.mix.constant.LogicStatus;
+import com.meteorcat.mix.constant.Protocols;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
 import com.meteorcat.spring.boot.starter.ActorEventContainer;
 import com.meteorcat.spring.boot.starter.ActorMapping;
@@ -72,11 +73,12 @@ public class AuthorizedLogic extends ActorConfigurer {
      * 登录
      * Example: { "value":100,"args":{ "secret": "0451d36d412830afb521fc3a3f828350", "uid": 1}}
      */
-    @ActorMapping(value = 100)
+    @ActorMapping(value = Protocols.LOGIN)
     public void login(WebsocketApplication runtime, WebSocketSession session, JsonNode args) throws Exception {
         // 没有传递JSON参数最好直接关闭掉链接防止掉无意义的嗅探
         if (args == null) {
-            session.close();
+            runtime.push(session, Protocols.PARAM_ERROR, new HashMap<>(0));
+            runtime.quit(session);
             return;
         }
 
@@ -84,14 +86,16 @@ public class AuthorizedLogic extends ActorConfigurer {
         // 获取JSON内部参数 - uid
         JsonNode uidNode = args.get("uid");
         if (uidNode == null || !uidNode.isNumber()) {
-            session.close();
+            runtime.push(session, Protocols.PARAM_ERROR, new HashMap<>(0));
+            runtime.quit(session);
             return;
         }
 
         // 获取JSON内部参数 - secret
         JsonNode secretNode = args.get("secret");
         if (secretNode == null || !secretNode.isTextual()) {
-            session.close();
+            runtime.push(session, Protocols.PARAM_ERROR, new HashMap<>(0));
+            runtime.quit(session);
             return;
         }
 
@@ -100,7 +104,7 @@ public class AuthorizedLogic extends ActorConfigurer {
         // 这里可以考虑返回错误消息之后才中断链接, 但是后续可以自己处理优化
         // TODO: 如果上线第三方SDK的时候需要在这里验证 Redis 内部授权码, 匹配完成才能切换成登录状态
         if (!secret.equals(secretNode.asText())) {
-            session.close();
+            runtime.push(session, Protocols.SECRET_ERROR, new HashMap<>(0));
             return;
         }
 
@@ -112,7 +116,7 @@ public class AuthorizedLogic extends ActorConfigurer {
         WebSocketSession owner = runtime.getSession(uid);
         if (owner != null) {
             // 找到会话返回消息并且强制踢下线
-            runtime.push(owner, 110, new HashMap<>(0));
+            runtime.push(owner, Protocols.OTHER_LOGIN, new HashMap<>(0));
             runtime.quit(owner);
         }
 
@@ -121,25 +125,15 @@ public class AuthorizedLogic extends ActorConfigurer {
         runtime.setState(session, LogicStatus.Authorized);// 切换已登录
 
 
-
         // 获取全局 Actor 容器
         ActorEventContainer container = runtime.getContainer();
 
 
         // 通知玩家模块挂载实体数据到内存
         ActorConfigurer playerConfigurer = container.get(300);
-        if (playerConfigurer != null){
-            playerConfigurer.invoke(300,3,uid);
+        if (playerConfigurer != null) {
+            playerConfigurer.invoke(300, 3, uid);
         }
-
-
-
-        // 通知聊天频道已经在线
-        ActorConfigurer chatConfigurer = container.get(200);
-        if (chatConfigurer != null) {
-            chatConfigurer.invoke(200, LogicStatus.Program, session, uid);
-        }
-
 
 
         // 验证完成, 服务端推送心跳包用来维持链接活跃
@@ -150,6 +144,12 @@ public class AuthorizedLogic extends ActorConfigurer {
                 throw new RuntimeException(e);
             }
         }, HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
+
+
+        // 通知客户端切换成 Scene
+        runtime.push(session, Protocols.CHANGE_SCENE, new HashMap<>(1) {{
+            put("scene", 1);
+        }});
     }
 
 
@@ -168,7 +168,7 @@ public class AuthorizedLogic extends ActorConfigurer {
 
         // 这里推送给外部会话队列
         // 这里响应代码可以自己处理, 后续优化可能需要定义全局静态码表
-        runtime.push(session, 100, new HashMap<>() {{
+        runtime.push(session, Protocols.HEARTBEAT, new HashMap<>() {{
             put("heartbeat", System.currentTimeMillis());
         }});
 
@@ -180,19 +180,6 @@ public class AuthorizedLogic extends ActorConfigurer {
                 throw new RuntimeException(e);
             }
         }, HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
-    }
-
-
-    /**
-     * 这里编写授权样例, 可以看到 state 设定成只能被 {1,2,3} 其中之一访问
-     * 如果没有先跑 100 登录授权接口, 那么这个接口是无法被访问到的
-     */
-    @ActorMapping(value = 111, state = {1, 2, 3})
-    public void tick(WebsocketApplication runtime, WebSocketSession session, JsonNode args) throws IOException {
-        logger.info("已被授权, 可以被访问到了");
-        runtime.push(session, 111, new HashMap<>() {{
-            put("message", "hello.world");
-        }});
     }
 
 }
