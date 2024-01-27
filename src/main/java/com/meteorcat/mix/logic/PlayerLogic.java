@@ -2,6 +2,7 @@ package com.meteorcat.mix.logic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.meteorcat.mix.WebsocketApplication;
+import com.meteorcat.mix.constant.LogicStatus;
 import com.meteorcat.mix.model.PlayerInfoModel;
 import com.meteorcat.mix.model.server.PlayerInfoServer;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
@@ -106,10 +107,10 @@ public class PlayerLogic extends ActorConfigurer {
 
 
     /**
+     * 只允许本内部调用
      * 服务端内部调用的指令, 确认玩家是否存在, 不存在就读表配置生成实体
-     * 注意: 这里的 state 可以自己定义, 这里设为 3 用来提供给进程互相调用
      */
-    @ActorMapping(value = 300, state = {3})
+    @ActorMapping(value = 300, state = {LogicStatus.Program})
     public void check(Long uid) {
 
         // 测试同步写入数据库, 查找玩家数据, 如果查询到会被挂载在内存中等待以后调用
@@ -141,7 +142,7 @@ public class PlayerLogic extends ActorConfigurer {
      * @param session 会话
      * @param args    参数
      */
-    @ActorMapping(value = 302, state = {1})
+    @ActorMapping(value = 302, state = {LogicStatus.Authorized, LogicStatus.Gaming})
     public void addGold(WebsocketApplication runtime, WebSocketSession session, JsonNode args) {
         // 测试追加100金币
 

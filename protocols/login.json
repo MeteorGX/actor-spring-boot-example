@@ -1,0 +1,18 @@
+{
+  "101": {
+    "name": "SEND",
+    "description": "客户端推送给服务端请求"
+  },
+  "102": {
+    "name": "ERROR_BY_EXISTS",
+    "description": "服务端推送授权不存在"
+  },
+  "103": {
+    "name": "ERROR_BY_SECRET",
+    "description": "服务端推送授权响应失败"
+  },
+  "104": {
+    "name": "ERROR_BY_OTHER",
+    "description": "服务端推送异地登录"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "11": {
+    "name": "MESSAGE_LOG",
+    "description": "用于服务端返回日志消息"
+  },
+  "12": {
+    "name": "MESSAGE_NOTICE",
+    "description": "用于服务端返回提示消息"
+  },
+  "13": {
+    "name": "MESSAGE_WARN",
+    "description": "用于服务端返回警告消息"
+  },
+  "14": {
+    "name": "MESSAGE_ERROR",
+    "description": "用于服务端返回错误消息"
+  }
+}

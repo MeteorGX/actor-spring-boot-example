@@ -126,7 +126,7 @@ public class AuthorizedLogic extends ActorConfigurer {
 
 
         // 获取全局 Actor 容器
-        ActorEventContainer container = runtime.getContainer();
+        ActorEventContainer container = getContainer();
 
 
         // 通知玩家模块挂载实体数据到内存
@@ -173,7 +173,7 @@ public class AuthorizedLogic extends ActorConfigurer {
         }});
 
         // 延迟下一次递归进入该方法
-        runtime.getContainer().schedule(() -> {
+        getContainer().schedule(() -> {
             try {
                 heartbeat(runtime, session);
             } catch (IOException e) {

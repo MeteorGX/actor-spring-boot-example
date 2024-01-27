@@ -3,6 +3,8 @@ package com.meteorcat.mix;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meteorcat.mix.constant.LogicStatus;
+import com.meteorcat.mix.core.MessageFrame;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
 import com.meteorcat.spring.boot.starter.ActorEventContainer;
 import org.slf4j.Logger;
@@ -31,15 +33,6 @@ import java.util.concurrent.TimeUnit;
 public class WebsocketApplication extends TextWebSocketHandler {
 
 
-    /**
-     * 用于推送的网络数据帧 - 这里后续会移出先处理成这样
-     *
-     * @param session 句柄
-     * @param message 数据
-     */
-    public record MessageFrame(WebSocketSession session, TextMessage message) {
-    }
-
 
     /**
      * 日志句柄
@@ -50,16 +43,6 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * Actor 运行时
      */
     final ActorEventContainer container;
-
-
-    /**
-     * 获取 Actor 运行时
-     *
-     * @return ActorEventContainer
-     */
-    public ActorEventContainer getContainer() {
-        return container;
-    }
 
     /**
      * 玩家目前的登录状态 - 采用线程安全
@@ -157,13 +140,13 @@ public class WebsocketApplication extends TextWebSocketHandler {
         this.container.scheduleAtFixedRate(() -> {
             // 获取消息队列数据
             MessageFrame frame = messages.poll();
-            if (frame != null && frame.session.isOpen()) {
+            if (frame != null && frame.session().isOpen()) {
                 try {
                     // 推送数据 OR 关闭会话
-                    if (frame.message == null) {
-                        frame.session.close();
+                    if (frame.message() == null) {
+                        frame.session().close();
                     } else {
-                        frame.session.sendMessage(frame.message);
+                        frame.session().sendMessage(frame.message());
                     }
                 } catch (IOException e) {
                     logger.warn(e.getMessage());
@@ -183,7 +166,7 @@ public class WebsocketApplication extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
         logger.debug("Established = {}", session);
-        online.put(session, 0);
+        online.put(session, LogicStatus.None);
     }
 
 
