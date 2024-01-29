@@ -37,7 +37,7 @@ public class ActorConfig {
      *
      * @return ActorEventContainer
      */
-    @Bean(initMethod = "init", destroyMethod = "destroy")
+    @Bean
     public ActorEventContainer searchActor() {
         ActorEventContainer container = new ActorEventContainer(new ActorEventMonitor(5));
         container.setIdleThreads(1); // 预留线程处理

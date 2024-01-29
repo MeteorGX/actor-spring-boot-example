@@ -46,11 +46,9 @@ public class AuthorizedLogic extends ActorConfigurer {
     /**
      * 初始化
      *
-     * @throws Exception Error
      */
     @Override
-    public void init() throws Exception {
-        super.init();
+    public void init() {
         // 注意:
         //  这里本来是应该第三方认证授权后客户端提交上来 uid + secret
         //  但是开发阶段并没有接入第三方授权机制, 所以先采用随机生成字符串做固定授权
@@ -61,11 +59,9 @@ public class AuthorizedLogic extends ActorConfigurer {
     /**
      * 退出进程
      *
-     * @throws Exception Error
      */
     @Override
-    public void destroy() throws Exception {
-        super.destroy();
+    public void destroy() {
         logger.warn("server quit");
     }
 

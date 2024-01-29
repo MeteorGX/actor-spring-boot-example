@@ -1,0 +1,6 @@
+id,resource,name,award
+标识,场景,名称,解锁奖励
+0,res://Scenes/Login/Main.tscn,登录页面,[]
+1,res://Scenes/Home/Main.tscn,玩家首页,"[""100_1"",""200_2""]"
+2,res://Scenes/CityLight/Main.tscn,游戏城镇A,"[""100_1"",""200_2""]"
+3,res://Scenes/CityMoon/Main.tscn,游戏城镇B,"[""100_1"",""200_2""]"

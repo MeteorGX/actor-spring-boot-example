@@ -53,11 +53,9 @@ public class PlayerLogic extends ActorConfigurer {
      * 初始化方法
      * 这里其实应该加载测试配表, 提供给默认创建玩家信息数据
      *
-     * @throws Exception Error
      */
     @Override
-    public void init() throws Exception {
-        super.init();
+    public void init() {
         // todo: 启动时加载策划配表
 
 
@@ -73,11 +71,9 @@ public class PlayerLogic extends ActorConfigurer {
      * 退出方法
      * 将挂载更新过的实体写入到数据库内部完成落地
      *
-     * @throws Exception Error
      */
     @Override
-    public void destroy() throws Exception {
-        super.destroy();
+    public void destroy() {
 
         // 确认任务之后取消掉默认任务
         if (event != null) {
