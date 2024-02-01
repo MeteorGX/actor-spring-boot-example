@@ -39,17 +39,6 @@ public class ActorConfig {
      */
     @Bean
     public ActorEventContainer searchActor() {
-        ActorEventContainer container = new ActorEventContainer(new ActorEventMonitor(5));
-        container.setIdleThreads(1); // 预留线程处理
-
-        // 加载目前编写逻辑 Actor
-        Map<String, ActorConfigurer> classes = context.getBeansOfType(ActorConfigurer.class);
-        for (Map.Entry<String, ActorConfigurer> clazz : classes.entrySet()) {
-            ActorConfigurer configurer = clazz.getValue();
-            for (Integer value : configurer.values()) {
-                container.put(value, configurer);
-            }
-        }
-        return container;
+        return new ActorEventContainer(new ActorEventMonitor(2), context);
     }
 }

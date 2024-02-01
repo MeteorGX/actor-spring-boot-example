@@ -52,7 +52,6 @@ public class PlayerLogic extends ActorConfigurer {
     /**
      * 初始化方法
      * 这里其实应该加载测试配表, 提供给默认创建玩家信息数据
-     *
      */
     @Override
     public void init() {
@@ -70,7 +69,6 @@ public class PlayerLogic extends ActorConfigurer {
     /**
      * 退出方法
      * 将挂载更新过的实体写入到数据库内部完成落地
-     *
      */
     @Override
     public void destroy() {
@@ -148,6 +146,20 @@ public class PlayerLogic extends ActorConfigurer {
 
         // 直接玩家添加 100 金币等待延迟写入
         model.setGold(model.getGold() + 100);
+        playerInfoServer.mark(uid, model);
+    }
+
+
+    /**
+     * 追加金币
+     *
+     * @param uid   玩家ID
+     * @param value 追加数值
+     */
+    @ActorMapping(value = 303, state = {LogicStatus.Program})
+    public void changeGold(Long uid, Integer value) {
+        PlayerInfoModel model = playerInfoServer.getByUid(uid);
+        model.setGold(model.getGold() + value);
         playerInfoServer.mark(uid, model);
     }
 }

@@ -30,7 +30,7 @@
         <dependency>
             <groupId>com.meteorcat.spring.boot</groupId>
             <artifactId>actor-spring-boot-starter</artifactId>
-            <version>1.0.26-SNAPSHOT</version>
+            <version>1.0.37-SNAPSHOT</version>
         </dependency>
 
         <!-- Hotfix -->

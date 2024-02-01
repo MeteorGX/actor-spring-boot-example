@@ -128,7 +128,7 @@ public class AuthorizedLogic extends ActorConfigurer {
         // 通知玩家模块挂载实体数据到内存
         ActorConfigurer playerConfigurer = container.get(300);
         if (playerConfigurer != null) {
-            playerConfigurer.invoke(300, 3, uid);
+            playerConfigurer.invoke(300, LogicStatus.Program, uid);
         }
 
 

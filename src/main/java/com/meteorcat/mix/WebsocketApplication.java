@@ -153,7 +153,7 @@ public class WebsocketApplication extends TextWebSocketHandler {
                     throw new RuntimeException(e);
                 }
             }
-        }, 0, 1000L, TimeUnit.MILLISECONDS);
+        }, 0, 10L, TimeUnit.MILLISECONDS);
     }
 
 
