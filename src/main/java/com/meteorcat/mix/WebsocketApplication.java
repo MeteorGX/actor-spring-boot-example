@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 public class WebsocketApplication extends TextWebSocketHandler {
 
 
-
     /**
      * 日志句柄
      */
@@ -154,6 +153,13 @@ public class WebsocketApplication extends TextWebSocketHandler {
                 }
             }
         }, 0, 10L, TimeUnit.MILLISECONDS);
+
+
+        // 通知启动挂起运维服务
+        ActorConfigurer configurer = this.container.get(900);
+        if (configurer != null) {
+            configurer.invoke(900, LogicStatus.Program, this);
+        }
     }
 
 

@@ -30,7 +30,7 @@
         <dependency>
             <groupId>com.meteorcat.spring.boot</groupId>
             <artifactId>actor-spring-boot-starter</artifactId>
-            <version>1.0.37-SNAPSHOT</version>
+            <version>1.0.40-SNAPSHOT</version>
         </dependency>
 
         <!-- Hotfix -->
@@ -60,6 +60,12 @@
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>3.1.4</version>
+        </dependency>
+
+        <!-- Redis 数据库 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
 

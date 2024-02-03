@@ -94,7 +94,7 @@ public class RunLogic extends ActorConfigurer {
 
         // 判断之前是否有没有需要取消的任务
         ScheduledFuture<?> task = frames.get(uid);
-        if (task != null && !task.isCancelled()) {
+        if (task != null) {
             // todo: 取消并结算之前的帧任务并结算
             task.cancel(false);
         }
