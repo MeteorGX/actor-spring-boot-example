@@ -1,8 +1,14 @@
 package com.meteorcat.mix;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meteorcat.mix.constant.ActorStatus;
+import com.meteorcat.mix.core.ActorMessageQueue;
+import com.meteorcat.mix.core.ActorStateHashMap;
+import com.meteorcat.mix.core.ActorUserHashMap;
+import com.meteorcat.mix.core.MessageFrame;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
 import com.meteorcat.spring.boot.starter.ActorEventContainer;
 import org.slf4j.Logger;
@@ -18,9 +24,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,16 +33,6 @@ import java.util.concurrent.TimeUnit;
 @Order
 @Component
 public class WebsocketApplication extends TextWebSocketHandler {
-
-
-    /**
-     * 用于推送的网络数据帧 - 这里后续会移出先处理成这样
-     *
-     * @param session 句柄
-     * @param message 数据
-     */
-    public record MessageFrame(WebSocketSession session, TextMessage message) {
-    }
 
 
     /**
@@ -53,35 +47,27 @@ public class WebsocketApplication extends TextWebSocketHandler {
 
 
     /**
-     * 获取 Actor 运行时
-     *
-     * @return ActorEventContainer
-     */
-    public ActorEventContainer getContainer() {
-        return container;
-    }
-
-    /**
-     * 玩家目前的登录状态 - 采用线程安全
-     */
-    final Map<WebSocketSession, Integer> online = new ConcurrentHashMap<>();
-
-    /**
-     * 玩家登录 UID 标识 - 采用线程安全
-     */
-    final Map<WebSocketSession, Long> users = new ConcurrentHashMap<>();
-
-
-    /**
      * Json 解析器
      */
     final ObjectMapper mapper = new ObjectMapper();
 
 
     /**
+     * 玩家目前的状态
+     */
+    final ActorStateHashMap status = new ActorStateHashMap();
+
+
+    /**
+     * 玩家关联句柄
+     */
+    final ActorUserHashMap users = new ActorUserHashMap();
+
+
+    /**
      * 消息队列 - 数据采用线程安全处理
      */
-    final Queue<MessageFrame> messages = new ConcurrentLinkedDeque<>();
+    final ActorMessageQueue messages = new ActorMessageQueue();
 
 
     /**
@@ -90,9 +76,9 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * @param session 会话
      * @param state   状态
      */
-    public void setState(WebSocketSession session, Integer state) {
-        if (online.containsKey(session)) {
-            online.put(session, state);
+    public void setSessionState(WebSocketSession session, Integer state) {
+        if (status.containsKey(session)) {
+            status.put(session, state);
         }
     }
 
@@ -102,7 +88,7 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * @param session 会话
      * @param uid     Long
      */
-    public void setUid(WebSocketSession session, Long uid) {
+    public void setSessionUid(WebSocketSession session, Long uid) {
         if (users.containsValue(uid)) {
             for (Map.Entry<WebSocketSession, Long> user : users.entrySet()) {
                 if (user.getValue().equals(uid)) {
@@ -119,9 +105,9 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * 通过UID获取目前在线的会话
      *
      * @param uid 在线ID
-     * @return WebSocketSession
+     * @return WebSocketSession|Null
      */
-    public WebSocketSession getSession(Long uid) {
+    public WebSocketSession getSessionUid(Long uid) {
         if (users.containsValue(uid)) {
             // 反查出UID绑定会话句柄
             for (Map.Entry<WebSocketSession, Long> user : users.entrySet()) {
@@ -140,7 +126,7 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * @param session 会话
      * @return Uid
      */
-    public Long getUid(WebSocketSession session) {
+    public Long getSessionUid(WebSocketSession session) {
         return users.get(session);
     }
 
@@ -152,25 +138,49 @@ public class WebsocketApplication extends TextWebSocketHandler {
      */
     public WebsocketApplication(ActorEventContainer container) {
         this.container = container;
+
         // 启动时候线程池追加定时服务
         // 当数据队列为空的时候可以休眠下, 当 push 功能可以考虑继续唤醒定时任务
-        this.container.scheduleAtFixedRate(() -> {
-            // 获取消息队列数据
+        this.container.scheduleAtFixedRate(
+                this::fetchMessageQueue,
+                0,
+                17L,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+
+    /**
+     * 检出会话队列待推送数据
+     */
+    public void fetchMessageQueue() {
+        // 获取消息队列数据
+        if (!messages.isEmpty()) {
+            // 没有消息或者会话已经关闭跳过
             MessageFrame frame = messages.poll();
-            if (frame != null && frame.session.isOpen()) {
-                try {
-                    // 推送数据 OR 关闭会话
-                    if (frame.message == null) {
-                        frame.session.close();
-                    } else {
-                        frame.session.sendMessage(frame.message);
-                    }
-                } catch (IOException e) {
-                    logger.warn(e.getMessage());
-                    throw new RuntimeException(e);
-                }
+            if (frame == null) {
+                return;
             }
-        }, 0, 1000L, TimeUnit.MILLISECONDS);
+
+            // 获取会话,关闭跳过
+            WebSocketSession session = frame.session();
+            if (!session.isOpen()) {
+                return;
+            }
+
+            // 获取消息内容, 如果位 null 代表关闭
+            Optional<TextMessage> data = frame.message();
+            try {
+                if (data.isPresent()) {
+                    session.sendMessage(data.get());
+                } else {
+                    session.close();
+                }
+            } catch (IOException e) {
+                logger.warn(e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }
     }
 
 
@@ -178,12 +188,11 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * Established
      *
      * @param session handler
-     * @throws Exception Error
      */
     @Override
-    public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(@NonNull WebSocketSession session) {
         logger.debug("Established = {}", session);
-        online.put(session, 0);
+        status.put(session, ActorStatus.None);
     }
 
 
@@ -191,13 +200,13 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * Closed
      *
      * @param session handler
-     * @param status  close state
-     * @throws Exception Error
+     * @param reason  close state
      */
     @Override
-    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
-        logger.debug("Close = {},{}", session, status);
-        online.remove(session);
+    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus reason) {
+        logger.debug("Close = {},{}", session, reason);
+        status.remove(session);
+        users.remove(session);
     }
 
 
@@ -238,7 +247,19 @@ public class WebsocketApplication extends TextWebSocketHandler {
         args = args.isObject() ? args : null;
 
         // forward configurer
-        configurer.invoke(value, online.get(session), this, session, args);
+        logger.debug("Frame: {}", message);
+        configurer.invoke(value, status.get(session), this, session, args);
+    }
+
+
+    /**
+     * 推送消息给队列处理
+     *
+     * @param session 会话
+     * @param value   响应协议值
+     */
+    public void push(WebSocketSession session, Integer value) {
+        push(session, value, new HashMap<>(0));
     }
 
 
@@ -248,14 +269,17 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * @param session 会话
      * @param value   响应协议值
      * @param args    响应JSON
-     * @throws IOException Error
      */
-    public void push(WebSocketSession session, Integer value, Map<String, Object> args) throws IOException {
+    public void push(WebSocketSession session, Integer value, Map<String, Object> args) {
         Map<String, Object> response = new HashMap<>() {{
             put("value", value);
             put("args", args);
         }};
-        push(session, mapper.writeValueAsString(response));
+        try {
+            push(session, mapper.writeValueAsString(response));
+        } catch (JsonProcessingException exception) {
+            logger.error(exception.getMessage());
+        }
     }
 
     /**
@@ -265,7 +289,7 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * @param text    数据
      */
     public void push(WebSocketSession session, String text) {
-        messages.add(new MessageFrame(session, new TextMessage(text)));
+        messages.add(new MessageFrame(session, Optional.of(new TextMessage(text))));
     }
 
     /**
@@ -274,6 +298,6 @@ public class WebsocketApplication extends TextWebSocketHandler {
      * @param session 会话
      */
     public void quit(WebSocketSession session) {
-        messages.add(new MessageFrame(session, null));
+        messages.add(new MessageFrame(session, Optional.empty()));
     }
 }

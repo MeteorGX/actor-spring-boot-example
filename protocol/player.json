@@ -1,0 +1,6 @@
+{
+  "200": {
+    "name": "CREATE",
+    "description": "创建用户"
+  }
+}

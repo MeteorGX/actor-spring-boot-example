@@ -3,6 +3,7 @@ package com.meteorcat.mix.config;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
 import com.meteorcat.spring.boot.starter.ActorEventContainer;
 import com.meteorcat.spring.boot.starter.ActorEventMonitor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,12 @@ import java.util.Map;
  */
 @Configuration
 public class ActorConfig {
+
+    /**
+     * 服务启动线程数
+     */
+    @Value("${actor.monitor.core:4}")
+    private Integer monitorCore;
 
     /**
      * Spring运行时
@@ -32,6 +39,8 @@ public class ActorConfig {
     }
 
 
+
+
     /**
      * 配置 Actor 加载
      *
@@ -39,17 +48,6 @@ public class ActorConfig {
      */
     @Bean(initMethod = "init", destroyMethod = "destroy")
     public ActorEventContainer searchActor() {
-        ActorEventContainer container = new ActorEventContainer(new ActorEventMonitor(5));
-        container.setIdleThreads(1); // 预留线程处理
-
-        // 加载目前编写逻辑 Actor
-        Map<String, ActorConfigurer> classes = context.getBeansOfType(ActorConfigurer.class);
-        for (Map.Entry<String, ActorConfigurer> clazz : classes.entrySet()) {
-            ActorConfigurer configurer = clazz.getValue();
-            for (Integer value : configurer.values()) {
-                container.put(value, configurer);
-            }
-        }
-        return container;
+        return new ActorEventContainer(new ActorEventMonitor(monitorCore),context);
     }
 }
