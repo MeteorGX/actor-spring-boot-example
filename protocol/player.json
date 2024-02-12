@@ -2,5 +2,13 @@
   "200": {
     "name": "CREATE",
     "description": "创建用户"
+  },
+  "201": {
+    "name": "EXISTS",
+    "description": "用户已存在"
+  },
+  "210": {
+    "name": "INFO",
+    "description": "用户信息"
   }
 }

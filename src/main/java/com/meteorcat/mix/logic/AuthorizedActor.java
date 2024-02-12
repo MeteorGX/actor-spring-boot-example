@@ -14,15 +14,14 @@ import org.springframework.util.DigestUtils;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 授权登录相关
  */
-@EnableActor(owner = LoginActor.class)
-public class LoginActor extends ActorConfigurer {
+@EnableActor(owner = AuthorizedActor.class)
+public class AuthorizedActor extends ActorConfigurer {
 
     /**
      * 日志对象

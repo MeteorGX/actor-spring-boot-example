@@ -6,5 +6,9 @@
   "2": {
     "name": "PLAYER_EXISTS",
     "description": "玩家存在"
+  },
+  "3": {
+    "name": "PARAM_ERROR",
+    "description": "参数错误"
   }
 }
