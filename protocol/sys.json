@@ -10,5 +10,9 @@
   "3": {
     "name": "PARAM_ERROR",
     "description": "参数错误"
+  },
+  "10": {
+    "name": "CHANGE_GOLD",
+    "description": "修改玩家金币"
   }
 }

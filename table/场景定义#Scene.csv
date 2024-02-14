@@ -1,5 +1,5 @@
-id,name,resource
-场景ID,场景名称,客户端资源场景
-0,登录界面,res://scene/login/main.tscn
-1,创角界面,res://scene/create/main.tscn
-100,玩家首页,res://scene/home/main.tscn
+id,name,key,path,size
+场景ID,场景名称,场景标识,客户端资源场景,"地图大小(X,Y)"
+0,登录界面,player_login,res://scene/%s/main.tscn,"[0,0]"
+1,创角界面,player_create,res://scene/%s/main.tscn,"[0,0]"
+100,玩家首页,player_home,res://scene/%s/main.tscn,"[0,0]"

@@ -1,7 +1,11 @@
 package com.meteorcat.mix.logic.player;
 
+import com.meteorcat.mix.constant.ActorStatus;
+import com.meteorcat.mix.constant.Protocols;
+import com.meteorcat.mix.model.PlayerInfoModel;
 import com.meteorcat.mix.server.PlayerInfoServer;
 import com.meteorcat.spring.boot.starter.ActorConfigurer;
+import com.meteorcat.spring.boot.starter.ActorMapping;
 import com.meteorcat.spring.boot.starter.EnableActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,4 +53,22 @@ public class PlayerResourceActor extends ActorConfigurer {
     public void destroy() {
         logger.info("退出玩家资源服务");
     }
+
+
+    /**
+     * 修改玩家金币
+     *
+     * @param uid  玩家UID
+     * @param gold 修改金币, 正数为追加, 负数为扣除
+     */
+    @ActorMapping(value = Protocols.SYS_CHANGE_GOLD, state = ActorStatus.Memory)
+    public void changeGold(Long uid, Integer gold) {
+        PlayerInfoModel model = playerInfoServer.findByUid(uid);
+        if (model != null) {
+            logger.debug("玩家:{} 修改金币 {}", uid, gold);
+            model.setGold(model.getGold() + gold);
+            playerInfoServer.mark(uid, model);
+        }
+    }
+
 }

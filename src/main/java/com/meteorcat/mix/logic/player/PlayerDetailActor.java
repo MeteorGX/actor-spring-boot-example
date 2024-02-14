@@ -125,7 +125,7 @@ public class PlayerDetailActor extends ActorConfigurer {
         // 确认玩家存在, 如果存在就直接跳过任务
         PlayerInfoModel model = playerInfoServer.findByUid(uid);
         if (model != null) {
-            app.push(session,Protocols.PLAYER_EXISTS);
+            app.push(session, Protocols.PLAYER_EXISTS);
             return;
         }
 
@@ -133,14 +133,14 @@ public class PlayerDetailActor extends ActorConfigurer {
         // 获取所需的参数
         JsonNode nicknameNode = data.get("nickname");
         if (nicknameNode == null || !nicknameNode.isTextual()) {
-            app.push(session,Protocols.SYS_PARAM_ERROR);
+            app.push(session, Protocols.SYS_PARAM_ERROR);
             return;
         }
 
         // 昵称审核, 注意这里昵称可能要关键字屏蔽
         String nickname = nicknameNode.asText();
         if (nickname.isBlank()) {
-            app.push(session,Protocols.SYS_PARAM_ERROR);
+            app.push(session, Protocols.SYS_PARAM_ERROR);
             return;
         }
 
@@ -165,6 +165,7 @@ public class PlayerDetailActor extends ActorConfigurer {
     /**
      * 获取玩家实体信息, 用于客户端加载玩家数据
      * 客户端加载到玩家信息就可以在本地处理所需的资源构建同步
+     * 示例: { "value": 210, "args": { "player":{...} } }
      *
      * @param app     应用
      * @param session 会话
@@ -174,9 +175,10 @@ public class PlayerDetailActor extends ActorConfigurer {
     public void information(WebsocketApplication app, WebSocketSession session, JsonNode data) {
         Long uid = app.getSessionUid(session);
 
-        // todo: 获取出玩家实体如果没有直接返回错误
+        // 获取出玩家实体如果没有直接返回错误
         PlayerInfoModel model = playerInfoServer.findByUid(uid);
         if (model == null) {
+            app.push(session, Protocols.PLAYER_NOT_FOUND);
             return;
         }
 

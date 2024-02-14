@@ -7,6 +7,10 @@
     "name": "EXISTS",
     "description": "用户已存在"
   },
+  "202": {
+    "name": "NOT_FOUND",
+    "description": "用户不存在"
+  },
   "210": {
     "name": "INFO",
     "description": "用户信息"
