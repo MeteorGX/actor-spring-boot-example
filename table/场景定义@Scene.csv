@@ -1,5 +1,6 @@
-id,name,key,path,size
 场景ID,场景名称,场景标识,客户端资源场景,"地图大小(X,Y)"
+key,name,flag,path,size
+int,string,string,string,array
 0,登录界面,player_login,res://scene/%s/main.tscn,"[0,0]"
 1,创角界面,player_create,res://scene/%s/main.tscn,"[0,0]"
 100,玩家首页,player_home,res://scene/%s/main.tscn,"[0,0]"
